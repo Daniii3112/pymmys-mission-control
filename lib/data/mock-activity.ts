@@ -1,0 +1,87 @@
+import type { ActivityEvent } from '@/types';
+
+export const initialActivity: ActivityEvent[] = [
+  {
+    id: 'evt-001',
+    type: 'task_started',
+    agentId: 'agent-researcher',
+    agentName: 'Nexus',
+    message: 'Starting deep-dive research on Competitor B product roadmap',
+    timestamp: new Date(Date.now() - 45_000),
+  },
+  {
+    id: 'evt-002',
+    type: 'tool_call',
+    agentId: 'agent-executor',
+    agentName: 'Axiom',
+    message: 'Called web_search("Acme Corp pricing 2024 enterprise")',
+    timestamp: new Date(Date.now() - 38_000),
+  },
+  {
+    id: 'evt-003',
+    type: 'message_sent',
+    agentId: 'agent-orchestrator',
+    agentName: 'Pymmys Core',
+    message: 'Delegating market analysis to Prism — research phase 67% complete',
+    timestamp: new Date(Date.now() - 32_000),
+  },
+  {
+    id: 'evt-004',
+    type: 'task_completed',
+    agentId: 'agent-executor',
+    agentName: 'Axiom',
+    message: 'Completed scraping 12 competitor pricing pages — 847 data points collected',
+    timestamp: new Date(Date.now() - 28_000),
+  },
+  {
+    id: 'evt-005',
+    type: 'handoff',
+    agentId: 'agent-researcher',
+    agentName: 'Nexus',
+    message: 'Handing off raw research data to Prism for statistical processing',
+    timestamp: new Date(Date.now() - 22_000),
+  },
+  {
+    id: 'evt-006',
+    type: 'tool_call',
+    agentId: 'agent-analyst',
+    agentName: 'Prism',
+    message: 'Running regression model on market share dataset (n=2,400)',
+    timestamp: new Date(Date.now() - 15_000),
+  },
+  {
+    id: 'evt-007',
+    type: 'agent_online',
+    agentId: 'agent-coder',
+    agentName: 'Forge',
+    message: 'Forge came online — resuming endpoint migration task',
+    timestamp: new Date(Date.now() - 9_000),
+  },
+  {
+    id: 'evt-008',
+    type: 'task_started',
+    agentId: 'agent-coder',
+    agentName: 'Forge',
+    message: 'Migrating /api/auth/login to Next.js Route Handler',
+    timestamp: new Date(Date.now() - 4_000),
+  },
+];
+
+// Pool of live activity messages for simulation
+export const liveActivityPool: Omit<ActivityEvent, 'id' | 'timestamp'>[] = [
+  { type: 'tool_call', agentId: 'agent-researcher', agentName: 'Nexus', message: 'Fetching G2 reviews for Competitor C (page 3 of 8)' },
+  { type: 'tool_call', agentId: 'agent-executor', agentName: 'Axiom', message: 'Calling GitHub API — scanning job postings for tech stack signals' },
+  { type: 'message_sent', agentId: 'agent-orchestrator', agentName: 'Pymmys Core', message: 'Context window at 68% — summarizing research buffer' },
+  { type: 'task_started', agentId: 'agent-analyst', agentName: 'Prism', message: 'Generating market share visualization from regression output' },
+  { type: 'handoff', agentId: 'agent-coder', agentName: 'Forge', message: 'Requesting code review from Sentinel before merging auth migration' },
+  { type: 'tool_call', agentId: 'agent-coder', agentName: 'Forge', message: 'Running Vitest on /api/auth — 23/26 tests passing' },
+  { type: 'message_sent', agentId: 'agent-planner', agentName: 'Blueprint', message: 'Campaign calendar draft ready — assigning week 1 tasks to Scribe' },
+  { type: 'task_completed', agentId: 'agent-analyst', agentName: 'Prism', message: 'Market share model converged — 94% confidence interval' },
+  { type: 'tool_call', agentId: 'agent-researcher', agentName: 'Nexus', message: 'Extracting features from competitor changelog entries (142 found)' },
+  { type: 'message_sent', agentId: 'agent-orchestrator', agentName: 'Pymmys Core', message: 'All Phase 1 subtasks complete — initiating Phase 2: synthesis' },
+  { type: 'error', agentId: 'agent-executor', agentName: 'Axiom', message: 'Rate limit hit on LinkedIn scraper — retrying in 30s' },
+  { type: 'task_started', agentId: 'agent-writer', agentName: 'Scribe', message: 'Beginning executive summary draft — estimated 900 tokens' },
+  { type: 'tool_call', agentId: 'agent-analyst', agentName: 'Prism', message: 'Generating competitive positioning chart (12 axes, 5 competitors)' },
+  { type: 'handoff', agentId: 'agent-analyst', agentName: 'Prism', message: 'Sending finalized charts to Scribe for report embedding' },
+  { type: 'task_completed', agentId: 'agent-coder', agentName: 'Forge', message: '/api/auth migration complete — all 26 tests green' },
+];

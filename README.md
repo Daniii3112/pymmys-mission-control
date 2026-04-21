@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pymmys Mission Control
 
-## Getting Started
+> AI agent orchestration headquarters — manage, monitor, and direct your entire agent fleet in real time.
 
-First, run the development server:
+Premium dark SaaS dashboard with a real FastAPI + SQLite backend.
+
+---
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS v4 |
+| Animations | Framer Motion |
+| State | Zustand (polled from API) |
+| Icons | Lucide React |
+| Backend | FastAPI 0.111+ |
+| Database | SQLite via SQLAlchemy 2 |
+| Server | Uvicorn |
+
+---
+
+## Quick Start
+
+### 1 — Backend
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Install Python deps (once)
+pip install -r requirements.txt
+
+# Start the FastAPI server (auto-seeds on first run)
+uvicorn backend.main:app --reload --port 8000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The backend seeds 8 agents, 4 missions, 12 tasks, and 8 activity events on first start, then immediately begins generating live activity and incrementing task progress via a background thread.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2 — Frontend
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev        # requires Node.js 18+
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000) → auto-redirects to `/dashboard`.
 
-To learn more about Next.js, take a look at the following resources:
+### 3 — Environment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.local` if you change the backend port:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Architecture (Phase 1)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+┌─────────────────────────────────────┐     HTTP polling (3-4s)
+│  Next.js Frontend (port 3000)       │ ◄──────────────────────►  ┌──────────────────────────┐
+│                                     │                            │  FastAPI Backend (8000)  │
+│  Zustand store                      │   GET /agents              │                          │
+│  ├── agents[]                       │   GET /missions            │  /agents                 │
+│  ├── missions[]                     │   GET /activity            │  /missions (+ tasks)     │
+│  ├── tasks[]                        │   GET /system/summary      │  /activity               │
+│  └── activity[]                     │   POST /missions           │  /system/summary         │
+│                                     │   POST /agents/{id}/run    │  /agents/{id}/run        │
+│  lib/api.ts                         │                            │                          │
+│  ├── fetchAgents()                  │                            │  SQLite DB               │
+│  ├── fetchMissionsWithTasks()       │                            │  ├── agents              │
+│  ├── fetchActivity()                │                            │  ├── missions            │
+│  └── fetchSystemSummary()           │                            │  ├── tasks               │
+│                                     │                            │  └── activity_events     │
+│  All visual components unchanged    │                            │                          │
+│  (read same Zustand store shape)    │                            │  Background simulator    │
+│                                     │                            │  ├── activity events/4s  │
+└─────────────────────────────────────┘                            │  └── task progress/2s    │
+                                                                   └──────────────────────────┘
+```
+
+### Data flow
+
+1. `Shell` mounts → calls `startPolling()`
+2. Two staggered `setTimeout` loops fire:
+   - **Agents + Missions loop** every 3s: `GET /agents` + `GET /missions` in parallel
+   - **Activity loop** every 4s (offset 1s): `GET /activity?limit=100`
+3. Each response is parsed (ISO strings → `Date` objects) and written to Zustand
+4. All components re-render from the same store shape — zero component changes required
+5. If backend is unreachable, a banner appears and stale data stays visible
+
+### Backend simulator
+
+Runs as a daemon thread inside the FastAPI process:
+- Rotates through 20 realistic activity messages, writes one to SQLite every ~4s
+- Increments all `running` task progress by 0.5–2.5% every 2s
+- Recomputes parent mission progress from task averages
+- Updates agent `last_seen` timestamps
+
+---
+
+## API Reference
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/agents` | All agents with status, metrics, position |
+| `GET` | `/missions` | All missions with embedded tasks |
+| `GET` | `/activity?limit=N` | Activity events, newest first |
+| `GET` | `/system/summary` | Aggregated system KPIs |
+| `POST` | `/missions` | Create a new mission |
+| `POST` | `/agents/{id}/run` | Activate an agent (sets status → busy) |
+| `GET` | `/health` | Health check |
+| `GET` | `/docs` | Swagger UI |
+
+---
+
+## Project Structure
+
+```
+backend/
+  main.py           # FastAPI app, CORS, lifespan (seed + simulator)
+  database.py       # SQLAlchemy engine + session factory
+  models.py         # ORM models (Agent, Mission, Task, ActivityEvent)
+  schemas.py        # Pydantic response schemas (mirror TS types exactly)
+  seed.py           # Initial data seeder (runs once on empty DB)
+  simulator.py      # Background thread: live activity + task progress
+  routers/
+    agents.py       # GET /agents, POST /agents/{id}/run
+    missions.py     # GET /missions, POST /missions
+    activity.py     # GET /activity
+    system.py       # GET /system/summary
+
+lib/
+  api.ts            # Typed fetch client + ISO→Date parsers
+  store/index.ts    # Zustand store — now polls API via startPolling()
+
+app/
+  layout.tsx        # Root layout with Shell
+  dashboard/        # KPI cards, mission list, agent fleet, activity feed
+  agents/           # Agent fleet grid + inspector panel
+  mission-control/  # SVG HQ map, task connections, inspector, live ticker
+  activity/         # Full event stream
+
+components/         # All unchanged — read same Zustand store shape
+  layout/shell.tsx  # Starts startPolling(), shows loading/error state
+  ...
+```
