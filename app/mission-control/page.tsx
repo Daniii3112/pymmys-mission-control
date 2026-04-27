@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crosshair, ChevronDown, Bot, Zap, BarChart3, LayoutGrid } from 'lucide-react';
+import { Crosshair, ChevronDown, Bot, Zap, BarChart3, LayoutGrid, Plus } from 'lucide-react';
 import HQMap from '@/components/mission-control/hq-map';
 import InspectorPanel from '@/components/mission-control/inspector-panel';
 import LiveTicker from '@/components/mission-control/live-ticker';
 import ActivityFeed from '@/components/dashboard/activity-feed';
+import CreateMissionModal from '@/components/mission-control/create-mission-modal';
 import { useAppStore } from '@/lib/store';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,6 +20,7 @@ export default function MissionControlPage() {
   const selectedMissionId = useAppStore((s) => s.ui.selectedMissionId);
   const selectMission = useAppStore((s) => s.selectMission);
   const [viewMode, setViewMode] = useState<ViewMode>('hq');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const selectedMission = missions.find((m) => m.id === selectedMissionId);
   const activeMissions = missions.filter((m) => m.status === 'active');
@@ -69,6 +71,22 @@ export default function MissionControlPage() {
           <StatChip icon={<Zap size={12} />} value={runningTasks} label="running tasks" color="var(--accent-indigo)" />
           <StatChip icon={<BarChart3 size={12} />} value={`${selectedMission?.progress ?? 0}%`} label="mission progress" color="var(--accent-emerald)" />
         </div>
+
+        {/* New Mission button */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+          style={{
+            background: 'rgba(79,70,229,0.9)',
+            border: '1px solid rgba(129,140,248,0.4)',
+            color: '#fff',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(79,70,229,1)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(79,70,229,0.9)')}
+        >
+          <Plus size={12} />
+          New Mission
+        </button>
 
         {/* View toggle */}
         <div
@@ -170,6 +188,8 @@ export default function MissionControlPage() {
         {/* Right inspector */}
         <InspectorPanel />
       </div>
+
+      <CreateMissionModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
     </div>
   );
 }

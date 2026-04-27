@@ -79,6 +79,14 @@ class MissionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class TaskCreate(BaseModel):
+    title: str
+    description: str = ""
+    priority: str = "medium"
+    assigned_agent_id: str
+    tags: list[str] = []
+
+
 class MissionCreate(BaseModel):
     name: str
     description: str = ""
@@ -87,6 +95,7 @@ class MissionCreate(BaseModel):
     agent_ids: list[str] = []
     tags: list[str] = []
     deadline: Optional[str] = None
+    tasks: list[TaskCreate] = []
 
 
 # ─── Activity ─────────────────────────────────────────────────────────────────

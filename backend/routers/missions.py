@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import MissionModel, TaskModel, ActivityEventModel
-from ..schemas import MissionOut, MissionCreate, TaskOut
+from ..schemas import MissionOut, MissionCreate, TaskOut, TaskCreate
 
 router = APIRouter(prefix="/missions", tags=["missions"])
 
@@ -80,6 +80,26 @@ def create_mission(payload: MissionCreate, db: Session = Depends(get_db)) -> Mis
     )
     db.add(m)
 
+    task_ids = []
+    for tc in payload.tasks:
+        task_id = f"task-{uuid.uuid4().hex[:8]}"
+        task_ids.append(task_id)
+        task_row = TaskModel(
+            id=task_id,
+            title=tc.title,
+            description=tc.description,
+            status="queued",
+            priority=tc.priority,
+            assigned_agent_id=tc.assigned_agent_id,
+            from_agent_id="agent-orchestrator",
+            mission_id=mission_id,
+            created_at=now,
+            progress=0.0,
+            tags=json.dumps(tc.tags),
+        )
+        db.add(task_row)
+    m.task_ids = json.dumps(task_ids)
+
     # Emit activity event
     evt = ActivityEventModel(
         id=f"evt-mission-{uuid.uuid4().hex[:12]}",
@@ -93,4 +113,5 @@ def create_mission(payload: MissionCreate, db: Session = Depends(get_db)) -> Mis
     db.commit()
     db.refresh(m)
 
-    return _mission_to_schema(m, [])
+    created_tasks = db.query(TaskModel).filter(TaskModel.mission_id == mission_id).all()
+    return _mission_to_schema(m, created_tasks)

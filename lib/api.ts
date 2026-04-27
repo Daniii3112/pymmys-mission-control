@@ -183,6 +183,14 @@ export async function runAgent(agentId: string): Promise<{ ok: boolean; message:
   });
 }
 
+export interface TaskCreatePayload {
+  title: string;
+  description?: string;
+  priority?: string;
+  assigned_agent_id: string;
+  tags?: string[];
+}
+
 export interface CreateMissionPayload {
   name: string;
   description?: string;
@@ -191,6 +199,7 @@ export interface CreateMissionPayload {
   agent_ids?: string[];
   tags?: string[];
   deadline?: string;
+  tasks?: TaskCreatePayload[];
 }
 
 export async function createMission(payload: CreateMissionPayload): Promise<Mission> {

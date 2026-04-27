@@ -5,7 +5,7 @@ When the Scribe agent (id: "agent-writer") completes a task, this module
 generates a real deliverable to store in task.output.
 
 Resolution order:
-  1. Anthropic API  — used when `anthropic` is installed AND ANTHROPIC_API_KEY is set
+  1. OpenAI API     — used when `openai` is installed AND OPENAI_API_KEY is set
   2. Deterministic  — structured template output based on task title/description
 
 Deterministic templates are realistic but reproducible: same task title always
@@ -17,19 +17,18 @@ import textwrap
 
 # ─── LLM path (optional) ─────────────────────────────────────────────────────
 
-_anthropic_client = None
+_openai_client = None
 
 try:
-    import anthropic as _anthropic_module
-
-    _api_key = os.getenv("ANTHROPIC_API_KEY")
+    from openai import OpenAI as _OpenAI
+    _api_key = os.getenv("OPENAI_API_KEY")
     if _api_key:
-        _anthropic_client = _anthropic_module.Anthropic(api_key=_api_key)
-        print("[scribe] Anthropic SDK ready — Scribe will use LLM-generated outputs")
+        _openai_client = _OpenAI(api_key=_api_key)
+        print("[scribe] OpenAI SDK ready — Scribe will use GPT-4o-mini outputs")
     else:
-        print("[scribe] ANTHROPIC_API_KEY not set — using deterministic outputs")
+        print("[scribe] OPENAI_API_KEY not set — using deterministic outputs")
 except ImportError:
-    print("[scribe] anthropic package not installed — using deterministic outputs")
+    print("[scribe] openai package not installed — using deterministic outputs")
 
 
 # ─── Deterministic templates ──────────────────────────────────────────────────
@@ -173,20 +172,26 @@ def generate_output(title: str, description: str) -> str:
     """
     Generate a text deliverable for a completed Scribe task.
 
-    Uses the Anthropic API when available; falls back to deterministic templates.
+    Uses the OpenAI API (gpt-4o-mini) when available; falls back to deterministic templates.
     Always returns a non-empty string suitable for task.output.
     """
-    if _anthropic_client is not None:
+    if _openai_client is not None:
         try:
-            response = _anthropic_client.messages.create(
-                model="claude-haiku-4-5-20251001",
+            response = _openai_client.chat.completions.create(
+                model="gpt-4o-mini",
                 max_tokens=600,
                 messages=[
                     {
-                        "role": "user",
+                        "role": "system",
                         "content": (
                             "You are Scribe, an expert content and communications agent "
-                            "inside an AI orchestration system.\n\n"
+                            "inside an AI orchestration system. Write professional, "
+                            "concise deliverables in markdown format."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
                             f"You just completed this task:\n"
                             f"Title: {title}\n"
                             f"Description: {description}\n\n"
@@ -197,8 +202,8 @@ def generate_output(title: str, description: str) -> str:
                     }
                 ],
             )
-            return response.content[0].text.strip()
+            return response.choices[0].message.content.strip()
         except Exception as exc:
-            print(f"[scribe] LLM call failed, falling back to template: {exc}")
+            print(f"[scribe] OpenAI call failed, falling back to template: {exc}")
 
     return _template(title, description)
